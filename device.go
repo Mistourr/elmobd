@@ -17,7 +17,7 @@ import (
 // response is a space-separated string of hex bytes, which looks something
 // like this:
 //
-//   41 0C 1A F8
+//	41 0C 1A F8
 //
 // The first 2 bytes are control bytes, while the rest of the bytes represent
 // the actual result. So this data type contains an array of those bytes in
@@ -28,6 +28,32 @@ import (
 type Result struct {
 	value []byte
 }
+
+/*==============================================================================
+ * External
+ */
+
+// Enumeration of different protocols that an be set with the ATSP command.
+type ProtocolCmd struct {
+	slug string
+}
+
+func (p ProtocolCmd) String() string {
+	return p.slug
+}
+
+var (
+	Automatic                  = ProtocolCmd{"ATSP0"}
+	SAE_J1850_PWM              = ProtocolCmd{"ATSP1"}
+	SAE_J1850_VPW              = ProtocolCmd{"ATSP2"}
+	ISO_9141_2                 = ProtocolCmd{"ATSP3"}
+	ISO_14230_4_KWP            = ProtocolCmd{"ATSP4"}
+	ISO_14230_4_KWP_FAST       = ProtocolCmd{"ATSP5"}
+	ISO_15765_4_CAN_11         = ProtocolCmd{"ATSP6"}
+	ISO_15765_4_CAN_29         = ProtocolCmd{"ATSP7"}
+	ISO_15765_4_CAN_11_UTILITY = ProtocolCmd{"ATSP8"}
+	ISO_15765_4_CAN_29_UTILITY = ProtocolCmd{"ATSP9"}
+)
 
 // NewResult constructors a Result by taking care of parsing the hex bytes into
 // binary representation.
@@ -239,6 +265,28 @@ func NewDevice(addr string, debug bool) (*Device, error) {
 func (dev *Device) SetAutomaticProtocol() error {
 	rawRes := dev.rawDevice.RunCommand("ATSP0")
 
+	if rawRes.Failed() {
+		return rawRes.GetError()
+	}
+
+	if dev.outputDebug {
+		fmt.Println(rawRes.FormatOverview())
+	}
+
+	outputs := rawRes.GetOutputs()
+
+	if outputs[0] != "OK" {
+		return fmt.Errorf(
+			"Expected OK response, got: %q",
+			outputs[0],
+		)
+	}
+
+	return nil
+}
+
+func (dev *Device) SetManualProtocol(protocol ProtocolCmd) error {
+	rawRes := dev.rawDevice.RunCommand(protocol.String())
 	if rawRes.Failed() {
 		return rawRes.GetError()
 	}
